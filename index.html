@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>🌍 Planet Shop — космический магазин</title>
-    
-    <meta name="description" content="Магазин-витрина с космическим дизайном. Товары вращаются как планеты.">
+    <title>🪐 Planet Shop — 3D магазин</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -42,38 +40,52 @@
         <div class="container">
             <div class="hero-content">
                 <h1>🪐 <span class="highlight">Космический</span> магазин</h1>
-                <p>Товары со всей галактики. Вращаются как планеты.</p>
+                <p>Вращай планеты и выбирай товары</p>
             </div>
         </div>
     </section>
 
-    <!-- ===== КАТЕГОРИИ ===== -->
-    <section class="categories-section">
+    <!-- ===== 3D СЦЕНА ===== -->
+    <section class="scene-container">
         <div class="container">
-            <h2 class="section-title">🌍 Категории</h2>
-            <div class="categories-orbit" id="categoriesOrbit">
-                <!-- Категории загружаются из JS -->
+            <div class="scene-wrapper" id="sceneWrapper">
+                <!-- Three.js сцена будет здесь -->
+                <div id="threeContainer"></div>
+                
+                <!-- Навигация по планетам (кнопки влево/вправо) -->
+                <button class="nav-btn prev" id="prevBtn" onclick="changePlanet(-1)">‹</button>
+                <button class="nav-btn next" id="nextBtn" onclick="changePlanet(1)">›</button>
+                
+                <!-- Индикатор текущей планеты -->
+                <div class="planet-indicator" id="planetIndicator"></div>
             </div>
         </div>
     </section>
 
-    <!-- ===== ТОВАРЫ (ПЛАНЕТЫ) ===== -->
-    <section class="products-section">
-        <div class="container">
-            <h2 class="section-title">🛸 Товары</h2>
-            <div class="products-universe" id="productsUniverse">
-                <!-- Товары загружаются из JS -->
+    <!-- ===== МОДАЛЬНОЕ ОКНО ТОВАРА ===== -->
+    <div class="product-modal" id="productModal">
+        <div class="modal-overlay" onclick="closeProductModal()"></div>
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeProductModal()">✕</button>
+            
+            <div class="modal-planet-preview" id="modalPlanetPreview">
+                <!-- Мини-планета будет здесь -->
+            </div>
+            
+            <div class="modal-info">
+                <h2 id="modalName"></h2>
+                <div class="modal-category" id="modalCategory"></div>
+                <div class="modal-price" id="modalPrice"></div>
+                <div class="modal-old-price" id="modalOldPrice"></div>
+                <p id="modalDesc" class="modal-desc"></p>
+                <div class="modal-stock" id="modalStock"></div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- ===== ПОДВАЛ ===== -->
-    <footer class="footer">
-        <div class="container">
-            <p>© 2025 Planet Shop. Все права защищены. 🪐</p>
-        </div>
-    </footer>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
     <script src="data.js"></script>
     <script src="script.js"></script>
 </body>
