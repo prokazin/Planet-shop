@@ -9,10 +9,8 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ===== ФОН (ЗВЁЗДЫ) ===== -->
     <div class="stars" id="stars"></div>
 
-    <!-- ===== ШАПКА ===== -->
     <header class="header">
         <div class="container">
             <div class="header-inner">
@@ -35,7 +33,6 @@
         </div>
     </header>
 
-    <!-- ===== ГЛАВНАЯ ===== -->
     <section class="hero">
         <div class="container">
             <div class="hero-content">
@@ -45,33 +42,22 @@
         </div>
     </section>
 
-    <!-- ===== 3D СЦЕНА ===== -->
     <section class="scene-container">
         <div class="container">
             <div class="scene-wrapper" id="sceneWrapper">
-                <!-- Three.js сцена будет здесь -->
                 <div id="threeContainer"></div>
-                
-                <!-- Навигация по планетам (кнопки влево/вправо) -->
                 <button class="nav-btn prev" id="prevBtn" onclick="changePlanet(-1)">‹</button>
                 <button class="nav-btn next" id="nextBtn" onclick="changePlanet(1)">›</button>
-                
-                <!-- Индикатор текущей планеты -->
                 <div class="planet-indicator" id="planetIndicator"></div>
             </div>
         </div>
     </section>
 
-    <!-- ===== МОДАЛЬНОЕ ОКНО ТОВАРА ===== -->
     <div class="product-modal" id="productModal">
         <div class="modal-overlay" onclick="closeProductModal()"></div>
         <div class="modal-content">
             <button class="modal-close" onclick="closeProductModal()">✕</button>
-            
-            <div class="modal-planet-preview" id="modalPlanetPreview">
-                <!-- Мини-планета будет здесь -->
-            </div>
-            
+            <div class="modal-planet-preview" id="modalPlanetPreview"></div>
             <div class="modal-info">
                 <h2 id="modalName"></h2>
                 <div class="modal-category" id="modalCategory"></div>
@@ -83,8 +69,237 @@
         </div>
     </div>
 
+    <!-- ===== ПОДКЛЮЧЕНИЕ THREE.JS (ПРАВИЛЬНОЕ) ===== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // OrbitControls встроенный (без отдельного файла)
+        // Создаём класс OrbitControls вручную
+        (function() {
+            // Проверяем, что THREE загружен
+            if (typeof THREE === 'undefined') return;
+            
+            THREE.OrbitControls = function(object, domElement) {
+                this.object = object;
+                this.domElement = domElement;
+                this.enableDamping = false;
+                this.dampingFactor = 0.05;
+                this.autoRotate = false;
+                this.autoRotateSpeed = 2.0;
+                this.enableZoom = true;
+                this.zoomSpeed = 1.0;
+                this.enablePan = true;
+                this.panSpeed = 1.0;
+                this.target = new THREE.Vector3();
+                this.rotateSpeed = 1.0;
+                
+                var scope = this;
+                var EPS = 0.000001;
+                var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5 };
+                var state = STATE.NONE;
+                var rotateStart = new THREE.Vector2();
+                var rotateEnd = new THREE.Vector2();
+                var rotateDelta = new THREE.Vector2();
+                var panStart = new THREE.Vector2();
+                var panEnd = new THREE.Vector2();
+                var panDelta = new THREE.Vector2();
+                var dollyStart = new THREE.Vector2();
+                var dollyEnd = new THREE.Vector2();
+                var dollyDelta = new THREE.Vector2();
+                var offset = new THREE.Vector3();
+                var quat = new THREE.Quaternion().setFromUnitVectors(object.up, new THREE.Vector3(0, 1, 0));
+                var quatInverse = quat.clone().inverse();
+                var lastPosition = new THREE.Vector3();
+                var lastQuaternion = new THREE.Quaternion();
+                
+                function getScale() {
+                    return 1;
+                }
+                
+                function rotateLeft(angle) {
+                    var quaternion = new THREE.Quaternion();
+                    quaternion.setFromAxisAngle(object.up, angle);
+                    quaternion.multiplyQuaternions(quaternion, object.quaternion);
+                    object.quaternion.copy(quaternion);
+                }
+                
+                function rotateUp(angle) {
+                    var quaternion = new THREE.Quaternion();
+                    quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), angle);
+                    quaternion.multiplyQuaternions(quaternion, object.quaternion);
+                    object.quaternion.copy(quaternion);
+                }
+                
+                function panLeft(distance, objectMatrix) {
+                    var v = new THREE.Vector3();
+                    v.setFromMatrixColumn(objectMatrix, 0);
+                    v.multiplyScalar(-distance);
+                    scope.target.add(v);
+                }
+                
+                function panUp(distance, objectMatrix) {
+                    var v = new THREE.Vector3();
+                    v.setFromMatrixColumn(objectMatrix, 1);
+                    v.multiplyScalar(distance);
+                    scope.target.add(v);
+                }
+                
+                function pan(delta, objectMatrix) {
+                    panLeft(delta.x, objectMatrix);
+                    panUp(delta.y, objectMatrix);
+                }
+                
+                function dollyIn(dollyScale) {
+                    var distance = scope.object.position.distanceTo(scope.target);
+                    distance *= dollyScale;
+                    var direction = new THREE.Vector3();
+                    direction.subVectors(scope.object.position, scope.target).normalize();
+                    scope.object.position.copy(scope.target).add(direction.multiplyScalar(distance));
+                }
+                
+                function update() {
+                    var position = scope.object.position;
+                    offset.copy(position).sub(scope.target);
+                    var angle = offset.angleTo(new THREE.Vector3(0, 0, 1));
+                    var radius = offset.length();
+                    var theta = Math.atan2(offset.x, offset.z);
+                    var phi = Math.atan2(Math.sqrt(offset.x * offset.x + offset.z * offset.z), offset.y);
+                    var newPhi = phi;
+                    var newTheta = theta;
+                    scope.object.position.x = radius * Math.sin(newPhi) * Math.sin(newTheta);
+                    scope.object.position.y = radius * Math.cos(newPhi);
+                    scope.object.position.z = radius * Math.sin(newPhi) * Math.cos(newTheta);
+                    scope.object.lookAt(scope.target);
+                }
+                
+                function onMouseDown(event) {
+                    if (event.button === 0) {
+                        state = STATE.ROTATE;
+                        rotateStart.set(event.clientX, event.clientY);
+                    } else if (event.button === 1) {
+                        state = STATE.DOLLY;
+                        dollyStart.set(event.clientX, event.clientY);
+                    } else if (event.button === 2) {
+                        state = STATE.PAN;
+                        panStart.set(event.clientX, event.clientY);
+                    }
+                    scope.domElement.addEventListener('mousemove', onMouseMove);
+                    scope.domElement.addEventListener('mouseup', onMouseUp);
+                }
+                
+                function onMouseMove(event) {
+                    if (state === STATE.ROTATE) {
+                        rotateEnd.set(event.clientX, event.clientY);
+                        rotateDelta.subVectors(rotateEnd, rotateStart);
+                        var element = scope.domElement;
+                        rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight * scope.rotateSpeed);
+                        rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed);
+                        rotateStart.copy(rotateEnd);
+                    } else if (state === STATE.DOLLY) {
+                        dollyEnd.set(event.clientX, event.clientY);
+                        dollyDelta.subVectors(dollyEnd, dollyStart);
+                        var dollyScale = Math.pow(0.95, -dollyDelta.y * scope.zoomSpeed);
+                        dollyIn(dollyScale);
+                        dollyStart.copy(dollyEnd);
+                    } else if (state === STATE.PAN) {
+                        panEnd.set(event.clientX, event.clientY);
+                        panDelta.subVectors(panEnd, panStart);
+                        var element = scope.domElement;
+                        var objectMatrix = new THREE.Matrix4();
+                        objectMatrix.extractRotation(scope.object.matrix);
+                        pan(new THREE.Vector2(panDelta.x, panDelta.y), objectMatrix);
+                        panStart.copy(panEnd);
+                    }
+                }
+                
+                function onMouseUp() {
+                    scope.domElement.removeEventListener('mousemove', onMouseMove);
+                    scope.domElement.removeEventListener('mouseup', onMouseUp);
+                    state = STATE.NONE;
+                }
+                
+                function onMouseWheel(event) {
+                    var delta = 0;
+                    if (event.deltaY) {
+                        delta = -event.deltaY / 40;
+                    } else if (event.wheelDelta) {
+                        delta = event.wheelDelta / 40;
+                    }
+                    dollyIn(Math.pow(0.95, -delta * scope.zoomSpeed));
+                }
+                
+                function onTouchStart(event) {
+                    var touches = event.touches;
+                    if (touches.length === 1) {
+                        state = STATE.TOUCH_ROTATE;
+                        rotateStart.set(touches[0].pageX, touches[0].pageY);
+                    } else if (touches.length === 2) {
+                        state = STATE.TOUCH_DOLLY;
+                        var dx = touches[0].pageX - touches[1].pageX;
+                        var dy = touches[0].pageY - touches[1].pageY;
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        dollyStart.set(0, distance);
+                    }
+                }
+                
+                function onTouchMove(event) {
+                    var touches = event.touches;
+                    event.preventDefault();
+                    if (state === STATE.TOUCH_ROTATE && touches.length === 1) {
+                        rotateEnd.set(touches[0].pageX, touches[0].pageY);
+                        rotateDelta.subVectors(rotateEnd, rotateStart);
+                        var element = scope.domElement;
+                        rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight * scope.rotateSpeed);
+                        rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed);
+                        rotateStart.copy(rotateEnd);
+                    } else if (state === STATE.TOUCH_DOLLY && touches.length === 2) {
+                        var dx = touches[0].pageX - touches[1].pageX;
+                        var dy = touches[0].pageY - touches[1].pageY;
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        dollyEnd.set(0, distance);
+                        dollyDelta.subVectors(dollyEnd, dollyStart);
+                        var dollyScale = Math.pow(0.95, dollyDelta.y * scope.zoomSpeed);
+                        dollyIn(dollyScale);
+                        dollyStart.copy(dollyEnd);
+                    }
+                }
+                
+                function onTouchEnd() {
+                    state = STATE.NONE;
+                }
+                
+                function dispose() {
+                    scope.domElement.removeEventListener('contextmenu', onContextMenu);
+                    scope.domElement.removeEventListener('mousedown', onMouseDown);
+                    scope.domElement.removeEventListener('wheel', onMouseWheel);
+                    scope.domElement.removeEventListener('touchstart', onTouchStart);
+                    scope.domElement.removeEventListener('touchmove', onTouchMove);
+                    scope.domElement.removeEventListener('touchend', onTouchEnd);
+                }
+                
+                function onContextMenu(event) {
+                    event.preventDefault();
+                }
+                
+                scope.domElement.addEventListener('contextmenu', onContextMenu);
+                scope.domElement.addEventListener('mousedown', onMouseDown);
+                scope.domElement.addEventListener('wheel', onMouseWheel, { passive: false });
+                scope.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+                scope.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+                scope.domElement.addEventListener('touchend', onTouchEnd);
+                
+                scope.update = update;
+                scope.dispose = dispose;
+                scope.enableZoom = true;
+                scope.enablePan = true;
+                scope.enableDamping = false;
+                scope.rotateSpeed = 1.0;
+                scope.zoomSpeed = 1.0;
+                scope.panSpeed = 1.0;
+                scope.autoRotate = false;
+                scope.autoRotateSpeed = 2.0;
+            };
+        })();
+    </script>
     
     <script src="data.js"></script>
     <script src="script.js"></script>
