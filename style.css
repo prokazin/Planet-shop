@@ -153,7 +153,6 @@ body {
 }
 #threeContainer { width: 100%; height: 100%; }
 
-/* ===== ИНФОРМАЦИЯ ПРИ НАВЕДЕНИИ ===== */
 .hover-info {
     position: absolute;
     bottom: 30px;
@@ -220,17 +219,19 @@ body {
 }
 .modal-close:hover { color: #fff; }
 
-.modal-planet-preview {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto 20px;
-    border-radius: 50%;
+.modal-image-container {
+    width: 100%;
+    height: 300px;
+    border-radius: 16px;
     overflow: hidden;
     background: rgba(255,255,255,0.02);
+    margin-bottom: 16px;
 }
-.modal-planet-preview canvas {
-    width: 100% !important;
-    height: 100% !important;
+.modal-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: rgba(0,0,0,0.3);
 }
 
 .modal-info h2 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
@@ -241,6 +242,14 @@ body {
 .modal-stock { font-size: 14px; font-weight: 500; }
 .modal-stock.in-stock { color: #34c759; }
 .modal-stock.out-of-stock { color: #ff3b30; }
+
+.modal-views {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 0.5px solid rgba(255,255,255,0.04);
+}
 
 /* ===== ПОДВАЛ ===== */
 .footer {
@@ -258,7 +267,7 @@ body {
     .hero h1 { font-size: 32px; }
     .header-search input { min-width: 120px; font-size: 12px; }
     .scene-wrapper { height: 400px; }
-    .modal-planet-preview { width: 150px; height: 150px; }
+    .modal-image-container { height: 200px; }
 }
 @media (max-width: 480px) {
     .header-inner { flex-direction: column; gap: 10px; }
@@ -266,4 +275,5 @@ body {
     .header-search input { width: 100%; }
     .scene-wrapper { height: 320px; }
     .modal-content { padding: 20px; }
+    .modal-image-container { height: 180px; }
 }
