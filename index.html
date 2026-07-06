@@ -46,18 +46,21 @@
         <div class="container">
             <div class="scene-wrapper" id="sceneWrapper">
                 <div id="threeContainer"></div>
-                
-                <!-- Информация о выбранном товаре -->
                 <div class="hover-info" id="hoverInfo"></div>
             </div>
         </div>
     </section>
 
+    <!-- ===== МОДАЛЬНОЕ ОКНО ТОВАРА ===== -->
     <div class="product-modal" id="productModal">
         <div class="modal-overlay" onclick="closeProductModal()"></div>
         <div class="modal-content">
             <button class="modal-close" onclick="closeProductModal()">✕</button>
-            <div class="modal-planet-preview" id="modalPlanetPreview"></div>
+            
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="Фото товара" class="modal-image">
+            </div>
+            
             <div class="modal-info">
                 <h2 id="modalName"></h2>
                 <div class="modal-category" id="modalCategory"></div>
@@ -65,13 +68,19 @@
                 <div class="modal-old-price" id="modalOldPrice"></div>
                 <p id="modalDesc" class="modal-desc"></p>
                 <div class="modal-stock" id="modalStock"></div>
+                <div class="modal-views" id="modalViews">👁️ Просмотров: 0</div>
             </div>
         </div>
     </div>
 
+    <footer class="footer">
+        <div class="container">
+            <p>© 2025 Planet Shop. Все права защищены. 🪐</p>
+        </div>
+    </footer>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // OrbitControls встроенный
         (function() {
             if (typeof THREE === 'undefined') return;
             THREE.OrbitControls = function(object, domElement) {
@@ -88,7 +97,6 @@
                 this.target = new THREE.Vector3();
                 this.rotateSpeed = 1.0;
                 var scope = this;
-                var EPS = 0.000001;
                 var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5 };
                 var state = STATE.NONE;
                 var rotateStart = new THREE.Vector2();
@@ -101,12 +109,6 @@
                 var dollyEnd = new THREE.Vector2();
                 var dollyDelta = new THREE.Vector2();
                 var offset = new THREE.Vector3();
-                var quat = new THREE.Quaternion().setFromUnitVectors(object.up, new THREE.Vector3(0, 1, 0));
-                var quatInverse = quat.clone().inverse();
-                var lastPosition = new THREE.Vector3();
-                var lastQuaternion = new THREE.Quaternion();
-                
-                function getScale() { return 1; }
                 
                 function rotateLeft(angle) {
                     var quaternion = new THREE.Quaternion();
@@ -149,28 +151,10 @@
                     scope.object.position.copy(scope.target).add(direction.multiplyScalar(distance));
                 }
                 
-                function update() {
-                    var position = scope.object.position;
-                    offset.copy(position).sub(scope.target);
-                    var angle = offset.angleTo(new THREE.Vector3(0, 0, 1));
-                    var radius = offset.length();
-                    var theta = Math.atan2(offset.x, offset.z);
-                    var phi = Math.atan2(Math.sqrt(offset.x * offset.x + offset.z * offset.z), offset.y);
-                    var newPhi = phi;
-                    var newTheta = theta;
-                    scope.object.position.x = radius * Math.sin(newPhi) * Math.sin(newTheta);
-                    scope.object.position.y = radius * Math.cos(newPhi);
-                    scope.object.position.z = radius * Math.sin(newPhi) * Math.cos(newTheta);
-                    scope.object.lookAt(scope.target);
-                }
-                
                 function onMouseDown(event) {
                     if (event.button === 0) {
                         state = STATE.ROTATE;
                         rotateStart.set(event.clientX, event.clientY);
-                    } else if (event.button === 1) {
-                        state = STATE.DOLLY;
-                        dollyStart.set(event.clientX, event.clientY);
                     } else if (event.button === 2) {
                         state = STATE.PAN;
                         panStart.set(event.clientX, event.clientY);
@@ -187,12 +171,6 @@
                         rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight * scope.rotateSpeed);
                         rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed);
                         rotateStart.copy(rotateEnd);
-                    } else if (state === STATE.DOLLY) {
-                        dollyEnd.set(event.clientX, event.clientY);
-                        dollyDelta.subVectors(dollyEnd, dollyStart);
-                        var dollyScale = Math.pow(0.95, -dollyDelta.y * scope.zoomSpeed);
-                        dollyIn(dollyScale);
-                        dollyStart.copy(dollyEnd);
                     } else if (state === STATE.PAN) {
                         panEnd.set(event.clientX, event.clientY);
                         panDelta.subVectors(panEnd, panStart);
@@ -222,12 +200,6 @@
                     if (touches.length === 1) {
                         state = STATE.TOUCH_ROTATE;
                         rotateStart.set(touches[0].pageX, touches[0].pageY);
-                    } else if (touches.length === 2) {
-                        state = STATE.TOUCH_DOLLY;
-                        var dx = touches[0].pageX - touches[1].pageX;
-                        var dy = touches[0].pageY - touches[1].pageY;
-                        var distance = Math.sqrt(dx * dx + dy * dy);
-                        dollyStart.set(0, distance);
                     }
                 }
                 
@@ -241,28 +213,10 @@
                         rotateLeft(2 * Math.PI * rotateDelta.x / element.clientHeight * scope.rotateSpeed);
                         rotateUp(2 * Math.PI * rotateDelta.y / element.clientHeight * scope.rotateSpeed);
                         rotateStart.copy(rotateEnd);
-                    } else if (state === STATE.TOUCH_DOLLY && touches.length === 2) {
-                        var dx = touches[0].pageX - touches[1].pageX;
-                        var dy = touches[0].pageY - touches[1].pageY;
-                        var distance = Math.sqrt(dx * dx + dy * dy);
-                        dollyEnd.set(0, distance);
-                        dollyDelta.subVectors(dollyEnd, dollyStart);
-                        var dollyScale = Math.pow(0.95, dollyDelta.y * scope.zoomSpeed);
-                        dollyIn(dollyScale);
-                        dollyStart.copy(dollyEnd);
                     }
                 }
                 
                 function onTouchEnd() { state = STATE.NONE; }
-                
-                function dispose() {
-                    scope.domElement.removeEventListener('contextmenu', onContextMenu);
-                    scope.domElement.removeEventListener('mousedown', onMouseDown);
-                    scope.domElement.removeEventListener('wheel', onMouseWheel);
-                    scope.domElement.removeEventListener('touchstart', onTouchStart);
-                    scope.domElement.removeEventListener('touchmove', onTouchMove);
-                    scope.domElement.removeEventListener('touchend', onTouchEnd);
-                }
                 
                 function onContextMenu(event) { event.preventDefault(); }
                 
@@ -273,11 +227,11 @@
                 scope.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
                 scope.domElement.addEventListener('touchend', onTouchEnd);
                 
-                scope.update = update;
-                scope.dispose = dispose;
+                scope.update = function() {
+                    scope.object.lookAt(scope.target);
+                };
                 scope.enableZoom = true;
                 scope.enablePan = true;
-                scope.enableDamping = false;
                 scope.rotateSpeed = 1.0;
                 scope.zoomSpeed = 1.0;
                 scope.panSpeed = 1.0;
