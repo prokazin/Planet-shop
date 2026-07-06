@@ -3,7 +3,6 @@ var data = null;
 var modalType = '';
 var editIndex = null;
 
-// ===== ВХОД =====
 function login() {
     var pass = document.getElementById('adminPassword').value;
     if (pass === ADMIN_PASSWORD) {
@@ -12,12 +11,12 @@ function login() {
         loadAll();
         renderAll();
         updateDashboard();
+        loadTopProducts();
     } else {
         showToast('❌ Неверный пароль!');
     }
 }
 
-// ===== ЗАГРУЗКА ДАННЫХ =====
 function loadAll() {
     data = {
         products: loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts()),
@@ -33,7 +32,6 @@ function renderAll() {
     updateDashboard();
 }
 
-// ===== СТАТИСТИКА =====
 function fillStats() {
     var stats = data.stats || { views: 0, today: 0, lastVisit: null };
     document.getElementById('statsTotal').textContent = stats.views || 0;
@@ -50,7 +48,6 @@ function resetStats() {
     showToast('↺ Статистика сброшена');
 }
 
-// ===== ДАШБОРД =====
 function updateDashboard() {
     document.getElementById('statProducts').textContent = data.products ? data.products.length : 0;
     document.getElementById('statCategories').textContent = data.categories ? data.categories.length : 0;
@@ -59,7 +56,39 @@ function updateDashboard() {
     document.getElementById('statToday').textContent = stats.today || 0;
 }
 
-// ===== ТОВАРЫ =====
+// ===== ТОП ТОВАРОВ =====
+function loadTopProducts() {
+    var container = document.getElementById('topProducts');
+    if (!container) return;
+    
+    var analytics = loadPlanetData('planet_analytics', { views: {} });
+    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
+    
+    var viewsList = [];
+    for (var productId in analytics.views) {
+        var total = analytics.views[productId].total || 0;
+        viewsList.push({ id: parseInt(productId), views: total });
+    }
+    
+    viewsList.sort(function(a, b) { return b.views - a.views; });
+    var top5 = viewsList.slice(0, 5);
+    
+    if (top5.length === 0) {
+        container.innerHTML = '<div class="empty">Нет данных по просмотрам</div>';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < top5.length; i++) {
+        var product = products.find(function(p) { return p.id === top5[i].id; });
+        if (!product) continue;
+        var medal = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i] || '•';
+        html += '<div class="item"><span>' + medal + ' ' + product.name + '</span><span style="color:#6c3bff;">' + top5[i].views + ' просмотров</span></div>';
+    }
+    
+    container.innerHTML = html;
+}
+
 function renderProducts() {
     var container = document.getElementById('adminProducts');
     if (!container) return;
@@ -99,6 +128,7 @@ function openProductModal(index) {
     html += '<label>Категория</label><select id="modalCategory">' + catOptions + '</select>';
     html += '<label>Описание</label><textarea id="modalDesc" rows="3">' + (p ? p.desc : '') + '</textarea>';
     html += '<label>Ссылка на фото</label><input type="text" id="modalImage" value="' + (p ? p.image : '') + '">';
+    html += '<label>Иконка для планеты (эмодзи)</label><input type="text" id="modalIcon" value="' + (p ? p.icon : '🛸') + '">';
     html += '<label>В наличии</label><select id="modalStock"><option value="true"' + (p && p.inStock ? ' selected' : '') + '>Да</option><option value="false"' + (p && !p.inStock ? ' selected' : '') + '>Нет</option></select>';
     html += '<label>Хит продаж</label><select id="modalHit"><option value="true"' + (p && p.isHit ? ' selected' : '') + '>Да</option><option value="false"' + (p && !p.isHit ? ' selected' : '') + '>Нет</option></select>';
     html += '<div class="btn-group"><button class="btn btn-add" onclick="saveProduct()">💾 Сохранить</button><button class="btn btn-secondary" onclick="closeModal()">Отмена</button></div>';
@@ -115,6 +145,7 @@ function saveProduct() {
     var category = document.getElementById('modalCategory').value;
     var desc = document.getElementById('modalDesc').value;
     var image = document.getElementById('modalImage').value;
+    var icon = document.getElementById('modalIcon').value || '🛸';
     var inStock = document.getElementById('modalStock').value === 'true';
     var isHit = document.getElementById('modalHit').value === 'true';
 
@@ -128,6 +159,7 @@ function saveProduct() {
         category: category,
         desc: desc || 'Без описания',
         image: image || 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=400',
+        icon: icon,
         inStock: inStock,
         isHit: isHit
     };
@@ -152,7 +184,6 @@ function deleteProduct(index) {
     showToast('🗑️ Товар удалён');
 }
 
-// ===== КАТЕГОРИИ =====
 function renderCategories() {
     var container = document.getElementById('adminCategories');
     if (!container) return;
@@ -199,7 +230,6 @@ function saveCategory() {
     if (editIndex !== null) {
         data.categories[editIndex] = category;
     } else {
-        // Проверяем, нет ли уже такой категории
         if (data.categories.some(function(c) { return c.id === id; })) {
             showToast('❌ Категория с таким ID уже существует!');
             return;
@@ -221,7 +251,6 @@ function deleteCategory(index) {
     showToast('🗑️ Категория удалена');
 }
 
-// ===== ЗАЯВКИ =====
 function loadLeads() {
     var container = document.getElementById('adminLeads');
     if (!container) return;
@@ -251,7 +280,6 @@ function clearLeads() {
     showToast('🗑️ Все заявки удалены');
 }
 
-// ===== ВКЛАДКИ =====
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
     var target = document.getElementById('tab-' + tabId);
@@ -270,15 +298,14 @@ function switchTab(tabId) {
     });
     if (tabId === 'leads') loadLeads();
     if (tabId === 'stats') fillStats();
+    if (tabId === 'dashboard') loadTopProducts();
 }
 
-// ===== МОДАЛЬНОЕ ОКНО =====
 function closeModal() {
     document.getElementById('modalOverlay').classList.remove('active');
     editIndex = null;
 }
 
-// ===== ЭКСПОРТ/ИМПОРТ =====
 function exportData() {
     var fullData = {
         products: data.products,
@@ -329,7 +356,6 @@ function resetAll() {
     showToast('↺ Все данные сброшены!');
 }
 
-// ===== TOAST =====
 function showToast(msg) {
     var existing = document.querySelector('.toast');
     if (existing) existing.remove();
@@ -344,7 +370,6 @@ function showToast(msg) {
     }, 2500);
 }
 
-// ===== ЗАПУСК =====
 document.addEventListener('DOMContentLoaded', function() {
     switchTab('dashboard');
 });
