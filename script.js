@@ -16,22 +16,18 @@ function initScene() {
     var width = container.clientWidth;
     var height = container.clientHeight;
     
-    // Сцена
     scene = new THREE.Scene();
     
-    // Камера
     camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     camera.position.set(0, 1, 8);
     camera.lookAt(0, 0, 0);
     
-    // Рендерер
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
     
-    // Управление (для ручного вращения)
+    // Используем встроенный OrbitControls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -72,14 +68,12 @@ function onResize() {
     renderer.setSize(width, height);
 }
 
-// ===== СОЗДАНИЕ ПЛАНЕТЫ (3D СФЕРА) =====
+// ===== СОЗДАНИЕ ПЛАНЕТЫ =====
 function createPlanet(product, index, total) {
     var textureLoader = new THREE.TextureLoader();
     
-    // Создаём сферу
     var geometry = new THREE.SphereGeometry(1.2, 64, 64);
     
-    // Загружаем текстуру
     var texture = textureLoader.load(product.image || 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=400');
     
     var material = new THREE.MeshPhongMaterial({
@@ -92,7 +86,6 @@ function createPlanet(product, index, total) {
     
     var mesh = new THREE.Mesh(geometry, material);
     
-    // Позиция в сетке
     var cols = Math.min(total, 5);
     var rows = Math.ceil(total / cols);
     var col = index % cols;
@@ -119,7 +112,6 @@ function createPlanet(product, index, total) {
 
 // ===== ЗАГРУЗКА ТОВАРОВ =====
 function loadPlanets() {
-    // Очищаем сцену от старых планет
     planetMeshes.forEach(function(mesh) {
         scene.remove(mesh);
         mesh.geometry.dispose();
@@ -141,11 +133,9 @@ function loadPlanets() {
         planetMeshes.push(mesh);
     });
     
-    // Обновляем индикатор
     updateIndicator(products.length);
 }
 
-// ===== ОБНОВЛЕНИЕ ИНДИКАТОРА =====
 function updateIndicator(count) {
     var container = document.getElementById('planetIndicator');
     if (!container) return;
@@ -153,12 +143,13 @@ function updateIndicator(count) {
     for (var i = 0; i < count; i++) {
         var dot = document.createElement('span');
         dot.className = 'dot' + (i === 0 ? ' active' : '');
-        dot.onclick = function(idx) { return function() { goToPlanet(idx); }; }(i);
+        dot.onclick = (function(idx) {
+            return function() { goToPlanet(idx); };
+        })(i);
         container.appendChild(dot);
     }
 }
 
-// ===== ПЕРЕКЛЮЧЕНИЕ МЕЖДУ ПЛАНЕТАМИ =====
 function changePlanet(direction) {
     var total = planetMeshes.length;
     if (total === 0) return;
@@ -173,12 +164,10 @@ function goToPlanet(index) {
     var mesh = planetMeshes[index];
     if (!mesh) return;
     
-    // Анимируем камеру к планете
     var targetPos = mesh.position.clone();
     targetPos.z += 4;
     targetPos.y += 0.5;
     
-    // Плавный переход (через анимацию)
     var startPos = camera.position.clone();
     var startTime = Date.now();
     var duration = 600;
@@ -198,17 +187,14 @@ function goToPlanet(index) {
     }
     animateCamera();
     
-    // Обновляем индикатор
     document.querySelectorAll('.planet-indicator .dot').forEach(function(dot, i) {
         dot.classList.toggle('active', i === index);
     });
 }
 
-// ===== АНИМАЦИОННЫЙ ЦИКЛ =====
 function animate() {
     requestAnimationFrame(animate);
     
-    // Автовращение планет
     if (autoRotate) {
         planetMeshes.forEach(function(mesh) {
             mesh.rotation.y += mesh.userData.autoRotateSpeed || 0.003;
@@ -248,7 +234,6 @@ function openProductModal(index) {
         stockEl.className = 'modal-stock out-of-stock';
     }
     
-    // Мини-планета в модальном окне
     renderMiniPlanet(product.image);
     
     document.getElementById('productModal').classList.add('active');
@@ -267,12 +252,10 @@ function renderMiniPlanet(imageUrl) {
     var container = document.getElementById('modalPlanetPreview');
     if (!container) return;
     
-    // Очищаем старую сцену
     while (container.firstChild) {
         container.removeChild(container.firstChild);
     }
     
-    // Создаём мини-сцену
     var width = container.clientWidth || 200;
     var height = container.clientHeight || 200;
     
@@ -287,7 +270,6 @@ function renderMiniPlanet(imageUrl) {
     miniRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(miniRenderer.domElement);
     
-    // Свет
     var ambientLight = new THREE.AmbientLight(0x404060);
     miniScene.add(ambientLight);
     
@@ -295,7 +277,6 @@ function renderMiniPlanet(imageUrl) {
     directionalLight.position.set(5, 10, 7);
     miniScene.add(directionalLight);
     
-    // Планета
     var textureLoader = new THREE.TextureLoader();
     var texture = textureLoader.load(imageUrl || 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=400');
     
@@ -311,7 +292,6 @@ function renderMiniPlanet(imageUrl) {
     miniPlanet = new THREE.Mesh(geometry, material);
     miniScene.add(miniPlanet);
     
-    // Анимируем мини-планету
     function animateMini() {
         if (!miniPlanet) return;
         requestAnimationFrame(animateMini);
@@ -320,7 +300,6 @@ function renderMiniPlanet(imageUrl) {
     }
     animateMini();
     
-    // Обработчик ресайза
     setTimeout(function() {
         var newWidth = container.clientWidth || 200;
         var newHeight = container.clientHeight || 200;
@@ -338,10 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
     animate();
     updatePlanetStats();
     
-    // Клик по планете для открытия модального окна
     if (renderer && renderer.domElement) {
         renderer.domElement.addEventListener('click', function(event) {
-            // Проверяем, кликнули ли по планете (используем raycasting)
             var rect = renderer.domElement.getBoundingClientRect();
             var mouse = new THREE.Vector2(
                 ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -363,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ===== ПОИСК =====
 function searchProducts(e) {
     e.preventDefault();
     var query = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -378,11 +354,8 @@ function searchProducts(e) {
                p.desc.toLowerCase().includes(query);
     });
     
-    // Обновляем сцену с отфильтрованными товарами
-    // Показываем только те, что подходят под поиск
     planetData = filtered;
     
-    // Очищаем сцену
     planetMeshes.forEach(function(mesh) {
         scene.remove(mesh);
         mesh.geometry.dispose();
@@ -406,39 +379,12 @@ function searchProducts(e) {
     goToPlanet(0);
 }
 
-// ===== КЛИК ПО ПЛАНЕТЕ (через raycasting) =====
-document.addEventListener('click', function(event) {
-    // Проверяем, что клик был на 3D сцене
-    var container = document.getElementById('threeContainer');
-    if (!container || !container.contains(event.target)) return;
-    
-    var rect = renderer.domElement.getBoundingClientRect();
-    var mouse = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-    );
-    
-    var raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
-    
-    var intersects = raycaster.intersectObjects(planetMeshes);
-    if (intersects.length > 0) {
-        var hitMesh = intersects[0].object;
-        var index = planetMeshes.indexOf(hitMesh);
-        if (index !== -1) {
-            openProductModal(index);
-        }
-    }
-});
-
-// ===== ПОЛУЧИТЬ ИМЯ КАТЕГОРИИ =====
 function getCategoryName(categoryId) {
     var categories = loadPlanetData(PLANET_KEYS.CATEGORIES, getDefaultCategories());
     var cat = categories.find(function(c) { return c.id === categoryId; });
     return cat ? cat.name : categoryId;
 }
 
-// ===== ЗВЁЗДЫ =====
 function renderStars() {
     var container = document.getElementById('stars');
     if (!container) return;
@@ -456,7 +402,6 @@ function renderStars() {
     }
 }
 
-// ===== TOAST =====
 function showToast(msg) {
     var existing = document.querySelector('.toast');
     if (existing) existing.remove();
