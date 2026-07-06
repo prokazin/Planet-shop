@@ -1,8 +1,447 @@
-// ===== РЕНДЕРИНГ ЗВЁЗД =====
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+var currentPlanetIndex = 0;
+var planets = [];
+var scene, camera, renderer;
+var planetMeshes = [];
+var controls;
+var autoRotate = true;
+var isInteracting = false;
+var planetData = [];
+
+// ===== ИНИЦИАЛИЗАЦИЯ 3D СЦЕНЫ =====
+function initScene() {
+    var container = document.getElementById('threeContainer');
+    if (!container) return;
+    
+    var width = container.clientWidth;
+    var height = container.clientHeight;
+    
+    // Сцена
+    scene = new THREE.Scene();
+    
+    // Камера
+    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(0, 1, 8);
+    camera.lookAt(0, 0, 0);
+    
+    // Рендерер
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = false;
+    container.appendChild(renderer.domElement);
+    
+    // Управление (для ручного вращения)
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = false;
+    controls.enableZoom = false;
+    controls.enablePan = false;
+    controls.rotateSpeed = 0.8;
+    controls.target.set(0, 0, 0);
+    
+    // Свет
+    var ambientLight = new THREE.AmbientLight(0x404060);
+    scene.add(ambientLight);
+    
+    var directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(5, 10, 7);
+    scene.add(directionalLight);
+    
+    var pointLight = new THREE.PointLight(0x6c3bff, 0.5, 20);
+    pointLight.position.set(-3, 2, 4);
+    scene.add(pointLight);
+    
+    // Обработчики
+    renderer.domElement.addEventListener('mousedown', function() { autoRotate = false; isInteracting = true; });
+    renderer.domElement.addEventListener('mouseup', function() { isInteracting = false; setTimeout(function() { if (!isInteracting) autoRotate = true; }, 3000); });
+    renderer.domElement.addEventListener('touchstart', function() { autoRotate = false; isInteracting = true; });
+    renderer.domElement.addEventListener('touchend', function() { isInteracting = false; setTimeout(function() { if (!isInteracting) autoRotate = true; }, 3000); });
+    
+    window.addEventListener('resize', onResize);
+}
+
+function onResize() {
+    var container = document.getElementById('threeContainer');
+    if (!container) return;
+    var width = container.clientWidth;
+    var height = container.clientHeight;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}
+
+// ===== СОЗДАНИЕ ПЛАНЕТЫ (3D СФЕРА) =====
+function createPlanet(product, index, total) {
+    var textureLoader = new THREE.TextureLoader();
+    
+    // Создаём сферу
+    var geometry = new THREE.SphereGeometry(1.2, 64, 64);
+    
+    // Загружаем текстуру
+    var texture = textureLoader.load(product.image || 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=400');
+    
+    var material = new THREE.MeshPhongMaterial({
+        map: texture,
+        shininess: 30,
+        specular: new THREE.Color(0x222244),
+        emissive: new THREE.Color(0x111122),
+        emissiveIntensity: 0.1
+    });
+    
+    var mesh = new THREE.Mesh(geometry, material);
+    
+    // Позиция в сетке
+    var cols = Math.min(total, 5);
+    var rows = Math.ceil(total / cols);
+    var col = index % cols;
+    var row = Math.floor(index / cols);
+    var spacingX = 3.5;
+    var spacingZ = 3.5;
+    
+    var offsetX = (cols - 1) * spacingX / 2;
+    var offsetZ = (rows - 1) * spacingZ / 2;
+    
+    mesh.position.set(
+        col * spacingX - offsetX,
+        0,
+        row * spacingZ - offsetZ
+    );
+    
+    mesh.userData = { 
+        productIndex: index,
+        autoRotateSpeed: 0.003 + (index % 3) * 0.001
+    };
+    
+    return mesh;
+}
+
+// ===== ЗАГРУЗКА ТОВАРОВ =====
+function loadPlanets() {
+    // Очищаем сцену от старых планет
+    planetMeshes.forEach(function(mesh) {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+    });
+    planetMeshes = [];
+    
+    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
+    planetData = products;
+    
+    if (products.length === 0) {
+        showToast('🌠 Нет товаров');
+        return;
+    }
+    
+    products.forEach(function(product, index) {
+        var mesh = createPlanet(product, index, products.length);
+        scene.add(mesh);
+        planetMeshes.push(mesh);
+    });
+    
+    // Обновляем индикатор
+    updateIndicator(products.length);
+}
+
+// ===== ОБНОВЛЕНИЕ ИНДИКАТОРА =====
+function updateIndicator(count) {
+    var container = document.getElementById('planetIndicator');
+    if (!container) return;
+    container.innerHTML = '';
+    for (var i = 0; i < count; i++) {
+        var dot = document.createElement('span');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dot.onclick = function(idx) { return function() { goToPlanet(idx); }; }(i);
+        container.appendChild(dot);
+    }
+}
+
+// ===== ПЕРЕКЛЮЧЕНИЕ МЕЖДУ ПЛАНЕТАМИ =====
+function changePlanet(direction) {
+    var total = planetMeshes.length;
+    if (total === 0) return;
+    currentPlanetIndex = (currentPlanetIndex + direction + total) % total;
+    goToPlanet(currentPlanetIndex);
+}
+
+function goToPlanet(index) {
+    if (index < 0 || index >= planetMeshes.length) return;
+    currentPlanetIndex = index;
+    
+    var mesh = planetMeshes[index];
+    if (!mesh) return;
+    
+    // Анимируем камеру к планете
+    var targetPos = mesh.position.clone();
+    targetPos.z += 4;
+    targetPos.y += 0.5;
+    
+    // Плавный переход (через анимацию)
+    var startPos = camera.position.clone();
+    var startTime = Date.now();
+    var duration = 600;
+    
+    function animateCamera() {
+        var elapsed = Date.now() - startTime;
+        var progress = Math.min(elapsed / duration, 1);
+        var ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+        
+        camera.position.lerpVectors(startPos, targetPos, ease);
+        camera.lookAt(mesh.position);
+        controls.target.copy(mesh.position);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateCamera);
+        }
+    }
+    animateCamera();
+    
+    // Обновляем индикатор
+    document.querySelectorAll('.planet-indicator .dot').forEach(function(dot, i) {
+        dot.classList.toggle('active', i === index);
+    });
+}
+
+// ===== АНИМАЦИОННЫЙ ЦИКЛ =====
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // Автовращение планет
+    if (autoRotate) {
+        planetMeshes.forEach(function(mesh) {
+            mesh.rotation.y += mesh.userData.autoRotateSpeed || 0.003;
+        });
+    }
+    
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+// ===== ОТКРЫТИЕ МОДАЛЬНОГО ОКНА =====
+function openProductModal(index) {
+    var product = planetData[index];
+    if (!product) return;
+    
+    document.getElementById('modalName').textContent = product.name;
+    document.getElementById('modalCategory').textContent = getCategoryName(product.category);
+    
+    var priceHtml = product.price.toLocaleString() + ' ₽';
+    document.getElementById('modalPrice').textContent = priceHtml;
+    
+    if (product.oldPrice) {
+        document.getElementById('modalOldPrice').textContent = product.oldPrice.toLocaleString() + ' ₽';
+        document.getElementById('modalOldPrice').style.display = 'block';
+    } else {
+        document.getElementById('modalOldPrice').style.display = 'none';
+    }
+    
+    document.getElementById('modalDesc').textContent = product.desc || 'Без описания';
+    
+    var stockEl = document.getElementById('modalStock');
+    if (product.inStock) {
+        stockEl.textContent = '● В наличии';
+        stockEl.className = 'modal-stock in-stock';
+    } else {
+        stockEl.textContent = '● Нет в наличии';
+        stockEl.className = 'modal-stock out-of-stock';
+    }
+    
+    // Мини-планета в модальном окне
+    renderMiniPlanet(product.image);
+    
+    document.getElementById('productModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// ===== МИНИ-ПЛАНЕТА В МОДАЛЬНОМ ОКНЕ =====
+var miniScene, miniCamera, miniRenderer, miniPlanet;
+
+function renderMiniPlanet(imageUrl) {
+    var container = document.getElementById('modalPlanetPreview');
+    if (!container) return;
+    
+    // Очищаем старую сцену
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
+    
+    // Создаём мини-сцену
+    var width = container.clientWidth || 200;
+    var height = container.clientHeight || 200;
+    
+    miniScene = new THREE.Scene();
+    
+    miniCamera = new THREE.PerspectiveCamera(30, width / height, 0.1, 100);
+    miniCamera.position.set(0, 0, 4);
+    miniCamera.lookAt(0, 0, 0);
+    
+    miniRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    miniRenderer.setSize(width, height);
+    miniRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(miniRenderer.domElement);
+    
+    // Свет
+    var ambientLight = new THREE.AmbientLight(0x404060);
+    miniScene.add(ambientLight);
+    
+    var directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    directionalLight.position.set(5, 10, 7);
+    miniScene.add(directionalLight);
+    
+    // Планета
+    var textureLoader = new THREE.TextureLoader();
+    var texture = textureLoader.load(imageUrl || 'https://images.unsplash.com/photo-1535378917042-10a22c95931a?w=400');
+    
+    var geometry = new THREE.SphereGeometry(1.2, 48, 48);
+    var material = new THREE.MeshPhongMaterial({
+        map: texture,
+        shininess: 30,
+        specular: new THREE.Color(0x222244),
+        emissive: new THREE.Color(0x111122),
+        emissiveIntensity: 0.1
+    });
+    
+    miniPlanet = new THREE.Mesh(geometry, material);
+    miniScene.add(miniPlanet);
+    
+    // Анимируем мини-планету
+    function animateMini() {
+        if (!miniPlanet) return;
+        requestAnimationFrame(animateMini);
+        miniPlanet.rotation.y += 0.01;
+        miniRenderer.render(miniScene, miniCamera);
+    }
+    animateMini();
+    
+    // Обработчик ресайза
+    setTimeout(function() {
+        var newWidth = container.clientWidth || 200;
+        var newHeight = container.clientHeight || 200;
+        miniCamera.aspect = newWidth / newHeight;
+        miniCamera.updateProjectionMatrix();
+        miniRenderer.setSize(newWidth, newHeight);
+    }, 100);
+}
+
+// ===== ЗАПУСК =====
+document.addEventListener('DOMContentLoaded', function() {
+    renderStars();
+    initScene();
+    loadPlanets();
+    animate();
+    updatePlanetStats();
+    
+    // Клик по планете для открытия модального окна
+    if (renderer && renderer.domElement) {
+        renderer.domElement.addEventListener('click', function(event) {
+            // Проверяем, кликнули ли по планете (используем raycasting)
+            var rect = renderer.domElement.getBoundingClientRect();
+            var mouse = new THREE.Vector2(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            
+            var raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            var intersects = raycaster.intersectObjects(planetMeshes);
+            if (intersects.length > 0) {
+                var hitMesh = intersects[0].object;
+                var index = planetMeshes.indexOf(hitMesh);
+                if (index !== -1) {
+                    openProductModal(index);
+                }
+            }
+        });
+    }
+});
+
+// ===== ПОИСК =====
+function searchProducts(e) {
+    e.preventDefault();
+    var query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query) {
+        loadPlanets();
+        return;
+    }
+    
+    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
+    var filtered = products.filter(function(p) {
+        return p.name.toLowerCase().includes(query) ||
+               p.desc.toLowerCase().includes(query);
+    });
+    
+    // Обновляем сцену с отфильтрованными товарами
+    // Показываем только те, что подходят под поиск
+    planetData = filtered;
+    
+    // Очищаем сцену
+    planetMeshes.forEach(function(mesh) {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+    });
+    planetMeshes = [];
+    
+    if (filtered.length === 0) {
+        showToast('🌠 Товаров не найдено');
+        return;
+    }
+    
+    filtered.forEach(function(product, index) {
+        var mesh = createPlanet(product, index, filtered.length);
+        scene.add(mesh);
+        planetMeshes.push(mesh);
+    });
+    
+    updateIndicator(filtered.length);
+    currentPlanetIndex = 0;
+    goToPlanet(0);
+}
+
+// ===== КЛИК ПО ПЛАНЕТЕ (через raycasting) =====
+document.addEventListener('click', function(event) {
+    // Проверяем, что клик был на 3D сцене
+    var container = document.getElementById('threeContainer');
+    if (!container || !container.contains(event.target)) return;
+    
+    var rect = renderer.domElement.getBoundingClientRect();
+    var mouse = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    
+    var raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    
+    var intersects = raycaster.intersectObjects(planetMeshes);
+    if (intersects.length > 0) {
+        var hitMesh = intersects[0].object;
+        var index = planetMeshes.indexOf(hitMesh);
+        if (index !== -1) {
+            openProductModal(index);
+        }
+    }
+});
+
+// ===== ПОЛУЧИТЬ ИМЯ КАТЕГОРИИ =====
+function getCategoryName(categoryId) {
+    var categories = loadPlanetData(PLANET_KEYS.CATEGORIES, getDefaultCategories());
+    var cat = categories.find(function(c) { return c.id === categoryId; });
+    return cat ? cat.name : categoryId;
+}
+
+// ===== ЗВЁЗДЫ =====
 function renderStars() {
     var container = document.getElementById('stars');
     if (!container) return;
-    
     for (var i = 0; i < 150; i++) {
         var star = document.createElement('div');
         star.className = 'star';
@@ -17,131 +456,18 @@ function renderStars() {
     }
 }
 
-// ===== РЕНДЕРИНГ КАТЕГОРИЙ =====
-function renderCategories() {
-    var container = document.getElementById('categoriesOrbit');
-    if (!container) return;
-    
-    var categories = loadPlanetData(PLANET_KEYS.CATEGORIES, getDefaultCategories());
-    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
-    
-    container.innerHTML = categories.map(function(cat) {
-        var count = products.filter(function(p) { return p.category === cat.id; }).length;
-        return '<button class="category-item" data-category="' + cat.id + '" onclick="filterByCategory(\'' + cat.id + '\')">' +
-            cat.icon + ' ' + cat.name +
-            '<span class="category-count">' + count + '</span>' +
-            '</button>';
-    }).join('');
-    
-    // Добавляем "Все"
-    var allBtn = document.createElement('button');
-    allBtn.className = 'category-item active';
-    allBtn.dataset.category = 'all';
-    allBtn.innerHTML = '🌌 Все <span class="category-count">' + products.length + '</span>';
-    allBtn.onclick = function() { filterByCategory('all'); };
-    container.prepend(allBtn);
+// ===== TOAST =====
+function showToast(msg) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 28px;border-radius:30px;font-size:14px;z-index:9999;backdrop-filter:blur(10px);border:0.5px solid rgba(255,255,255,0.04);animation:toastIn 0.4s ease;';
+    document.body.appendChild(toast);
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        toast.style.transition = '0.4s';
+        setTimeout(function() { toast.remove(); }, 400);
+    }, 2500);
 }
-
-// ===== РЕНДЕРИНГ ТОВАРОВ =====
-function renderProducts(products) {
-    var container = document.getElementById('productsUniverse');
-    if (!container) return;
-    
-    if (!products || products.length === 0) {
-        container.innerHTML = '<div class="no-results"><h3>🌠 Товаров не найдено</h3><p>Попробуйте изменить поиск</p></div>';
-        return;
-    }
-    
-    container.innerHTML = products.map(function(p, index) {
-        var oldPriceHtml = p.oldPrice ? '<span class="old">' + p.oldPrice.toLocaleString() + ' ₽</span>' : '';
-        var tagHtml = '';
-        if (p.isHit) tagHtml = '<span class="product-tag hit">🔥 Хит</span>';
-        else if (p.isNew) tagHtml = '<span class="product-tag">✨ Новинка</span>';
-        var stockHtml = p.inStock ? 
-            '<span class="product-stock in-stock">● В наличии</span>' : 
-            '<span class="product-stock out-of-stock">● Нет в наличии</span>';
-        var orbitDelay = (index * 0.3) + 's';
-        
-        return '<div class="product-card" style="animation-delay: ' + orbitDelay + '" onclick="openProduct(' + p.id + ')">' +
-            '<div class="orbit-ring"></div>' +
-            '<div class="product-image">' +
-            '<img src="' + p.image + '" alt="' + p.name + '" loading="lazy">' +
-            tagHtml +
-            '</div>' +
-            '<div class="product-info">' +
-            '<div class="product-name">' + p.name + '</div>' +
-            '<div class="product-category">' + getCategoryName(p.category) + '</div>' +
-            '<div class="product-price">' + p.price.toLocaleString() + ' ₽ ' + oldPriceHtml + '</div>' +
-            '<div class="product-desc">' + p.desc + '</div>' +
-            stockHtml +
-            '</div>' +
-            '</div>';
-    }).join('');
-}
-
-// ===== ПОЛУЧИТЬ ИМЯ КАТЕГОРИИ =====
-function getCategoryName(categoryId) {
-    var categories = loadPlanetData(PLANET_KEYS.CATEGORIES, getDefaultCategories());
-    var cat = categories.find(function(c) { return c.id === categoryId; });
-    return cat ? cat.name : categoryId;
-}
-
-// ===== ФИЛЬТР ПО КАТЕГОРИЯМ =====
-var currentCategory = 'all';
-var currentSearch = '';
-
-function filterByCategory(categoryId) {
-    currentCategory = categoryId;
-    document.querySelectorAll('.category-item').forEach(function(el) {
-        el.classList.toggle('active', el.dataset.category === categoryId);
-    });
-    applyFilters();
-}
-
-function searchProducts(e) {
-    e.preventDefault();
-    var input = document.getElementById('searchInput');
-    currentSearch = input.value.trim().toLowerCase();
-    applyFilters();
-}
-
-function applyFilters() {
-    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
-    
-    // Фильтр по категории
-    if (currentCategory !== 'all') {
-        products = products.filter(function(p) { return p.category === currentCategory; });
-    }
-    
-    // Фильтр по поиску
-    if (currentSearch) {
-        products = products.filter(function(p) {
-            return p.name.toLowerCase().includes(currentSearch) ||
-                   p.desc.toLowerCase().includes(currentSearch);
-        });
-    }
-    
-    renderProducts(products);
-}
-
-// ===== ОТКРЫТИЕ ТОВАРА (модальное окно) =====
-function openProduct(id) {
-    var products = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
-    var product = products.find(function(p) { return p.id === id; });
-    if (!product) return;
-    
-    alert('🪐 ' + product.name + '\n\n' + 
-          '📦 Категория: ' + getCategoryName(product.category) + '\n' +
-          '💰 Цена: ' + product.price.toLocaleString() + ' ₽\n' +
-          (product.oldPrice ? '🔥 Старая цена: ' + product.oldPrice.toLocaleString() + ' ₽\n' : '') +
-          '📝 ' + product.desc + '\n' +
-          (product.inStock ? '✅ В наличии' : '❌ Нет в наличии'));
-}
-
-// ===== ЗАПУСК =====
-document.addEventListener('DOMContentLoaded', function() {
-    renderStars();
-    renderCategories();
-    applyFilters();
-    updatePlanetStats();
-});
