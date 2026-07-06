@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 Админ-панель Planet Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>🪐 <span>Planet</span> Shop</h1>
+            <span class="admin-sub">Админ-панель</span>
+            <a href="index.html" class="back-link">← На сайт</a>
+        </header>
+
+        <!-- ===== ВХОД ===== -->
+        <div id="loginForm" class="login-form">
+            <h2>🔐 Вход</h2>
+            <input type="password" id="adminPassword" placeholder="Пароль">
+            <button onclick="login()">Войти</button>
+        </div>
+
+        <!-- ===== ПАНЕЛЬ ===== -->
+        <div id="adminPanel" style="display:none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Дашборд</button>
+                <button class="tab-btn" onclick="switchTab('products')">🛸 Товары</button>
+                <button class="tab-btn" onclick="switchTab('categories')">🌍 Категории</button>
+                <button class="tab-btn" onclick="switchTab('stats')">📈 Статистика</button>
+                <button class="tab-btn" onclick="switchTab('leads')">📩 Заявки</button>
+                <button class="tab-btn" onclick="switchTab('backup')">💾 Бэкап</button>
+            </div>
+
+            <!-- ===== ДАШБОРД ===== -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="number" id="statProducts">0</div><div class="label">Товаров</div></div>
+                    <div class="stat-card"><div class="number" id="statCategories">0</div><div class="label">Категорий</div></div>
+                    <div class="stat-card"><div class="number" id="statViews">0</div><div class="label">Просмотров</div></div>
+                    <div class="stat-card"><div class="number" id="statToday">0</div><div class="label">Сегодня</div></div>
+                </div>
+            </div>
+
+            <!-- ===== ТОВАРЫ ===== -->
+            <div id="tab-products" class="tab-content">
+                <div class="section">
+                    <h2>🛸 Управление товарами</h2>
+                    <div id="adminProducts"></div>
+                    <button class="btn btn-add" onclick="openProductModal()">➕ Добавить товар</button>
+                </div>
+            </div>
+
+            <!-- ===== КАТЕГОРИИ ===== -->
+            <div id="tab-categories" class="tab-content">
+                <div class="section">
+                    <h2>🌍 Управление категориями</h2>
+                    <div id="adminCategories"></div>
+                    <button class="btn btn-add" onclick="openCategoryModal()">➕ Добавить категорию</button>
+                </div>
+            </div>
+
+            <!-- ===== СТАТИСТИКА ===== -->
+            <div id="tab-stats" class="tab-content">
+                <div class="section">
+                    <h2>📈 Статистика посещений</h2>
+                    <div class="stats-detail">
+                        <div class="stat-row"><span>Всего просмотров</span><span id="statsTotal">0</span></div>
+                        <div class="stat-row"><span>Сегодня</span><span id="statsToday">0</span></div>
+                        <div class="stat-row"><span>Последний визит</span><span id="statsLast">—</span></div>
+                    </div>
+                    <button class="btn btn-danger" onclick="resetStats()">↺ Сбросить статистику</button>
+                </div>
+            </div>
+
+            <!-- ===== ЗАЯВКИ ===== -->
+            <div id="tab-leads" class="tab-content">
+                <div class="section">
+                    <h2>📩 Заявки</h2>
+                    <div id="adminLeads"></div>
+                    <button class="btn btn-danger" onclick="clearLeads()">🗑️ Очистить</button>
+                </div>
+            </div>
+
+            <!-- ===== БЭКАП ===== -->
+            <div id="tab-backup" class="tab-content">
+                <div class="section">
+                    <h2>💾 Бэкап</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success" onclick="exportData()">📤 Экспорт</button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 Импорт</button>
+                        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+                        <button class="btn btn-danger" onclick="resetAll()">⚠️ Сбросить всё</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
+    <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <h2 id="modalTitle">Добавить</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
