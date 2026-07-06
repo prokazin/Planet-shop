@@ -1,4 +1,3 @@
-// ===== УНИКАЛЬНЫЕ КЛЮЧИ ДЛЯ PLANET SHOP =====
 var PLANET_KEYS = {
     PRODUCTS: 'planet_products',
     CATEGORIES: 'planet_categories',
