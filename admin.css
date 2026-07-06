@@ -121,6 +121,17 @@ body {
     border-bottom:0.5px solid rgba(255,255,255,0.02);
 }
 
+#topProducts .item {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    border-bottom:0.5px solid rgba(255,255,255,0.02);
+}
+#topProducts .item:last-child { border-bottom:none; }
+#topProducts .item span:first-child { font-weight:500; }
+#topProducts .item span:last-child { color:#6c3bff; font-weight:600; }
+
 input, textarea, select {
     width:100%;
     padding:12px 16px;
