@@ -37,7 +37,7 @@
         <div class="container">
             <div class="hero-content">
                 <h1>🪐 <span class="highlight">Космический</span> магазин</h1>
-                <p>Вращай планеты и выбирай товары</p>
+                <p>Вращай планету и выбирай товары</p>
             </div>
         </div>
     </section>
@@ -46,9 +46,9 @@
         <div class="container">
             <div class="scene-wrapper" id="sceneWrapper">
                 <div id="threeContainer"></div>
-                <button class="nav-btn prev" id="prevBtn" onclick="changePlanet(-1)">‹</button>
-                <button class="nav-btn next" id="nextBtn" onclick="changePlanet(1)">›</button>
-                <div class="planet-indicator" id="planetIndicator"></div>
+                
+                <!-- Информация о выбранном товаре -->
+                <div class="hover-info" id="hoverInfo"></div>
             </div>
         </div>
     </section>
@@ -69,15 +69,11 @@
         </div>
     </div>
 
-    <!-- ===== ПОДКЛЮЧЕНИЕ THREE.JS (ПРАВИЛЬНОЕ) ===== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // OrbitControls встроенный (без отдельного файла)
-        // Создаём класс OrbitControls вручную
+        // OrbitControls встроенный
         (function() {
-            // Проверяем, что THREE загружен
             if (typeof THREE === 'undefined') return;
-            
             THREE.OrbitControls = function(object, domElement) {
                 this.object = object;
                 this.domElement = domElement;
@@ -91,7 +87,6 @@
                 this.panSpeed = 1.0;
                 this.target = new THREE.Vector3();
                 this.rotateSpeed = 1.0;
-                
                 var scope = this;
                 var EPS = 0.000001;
                 var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5 };
@@ -111,9 +106,7 @@
                 var lastPosition = new THREE.Vector3();
                 var lastQuaternion = new THREE.Quaternion();
                 
-                function getScale() {
-                    return 1;
-                }
+                function getScale() { return 1; }
                 
                 function rotateLeft(angle) {
                     var quaternion = new THREE.Quaternion();
@@ -219,11 +212,8 @@
                 
                 function onMouseWheel(event) {
                     var delta = 0;
-                    if (event.deltaY) {
-                        delta = -event.deltaY / 40;
-                    } else if (event.wheelDelta) {
-                        delta = event.wheelDelta / 40;
-                    }
+                    if (event.deltaY) { delta = -event.deltaY / 40; }
+                    else if (event.wheelDelta) { delta = event.wheelDelta / 40; }
                     dollyIn(Math.pow(0.95, -delta * scope.zoomSpeed));
                 }
                 
@@ -263,9 +253,7 @@
                     }
                 }
                 
-                function onTouchEnd() {
-                    state = STATE.NONE;
-                }
+                function onTouchEnd() { state = STATE.NONE; }
                 
                 function dispose() {
                     scope.domElement.removeEventListener('contextmenu', onContextMenu);
@@ -276,9 +264,7 @@
                     scope.domElement.removeEventListener('touchend', onTouchEnd);
                 }
                 
-                function onContextMenu(event) {
-                    event.preventDefault();
-                }
+                function onContextMenu(event) { event.preventDefault(); }
                 
                 scope.domElement.addEventListener('contextmenu', onContextMenu);
                 scope.domElement.addEventListener('mousedown', onMouseDown);
