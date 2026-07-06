@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>🌍 Planet Shop — космический магазин</title>
+    
+    <meta name="description" content="Магазин-витрина с космическим дизайном. Товары вращаются как планеты.">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ===== ФОН (ЗВЁЗДЫ) ===== -->
+    <div class="stars" id="stars"></div>
+
+    <!-- ===== ШАПКА ===== -->
+    <header class="header">
+        <div class="container">
+            <div class="header-inner">
+                <div class="logo">
+                    <a href="#">
+                        <span class="logo-icon">🪐</span>
+                        <span class="logo-text">PLANET <span class="logo-highlight">SHOP</span></span>
+                    </a>
+                </div>
+                <div class="header-search">
+                    <form onsubmit="searchProducts(event)">
+                        <input type="text" placeholder="Поиск по галактике..." id="searchInput">
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                    </form>
+                </div>
+                <div class="header-actions">
+                    <a href="admin.html" class="admin-link" title="Админ-панель">🌌</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== ГЛАВНАЯ ===== -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>🪐 <span class="highlight">Космический</span> магазин</h1>
+                <p>Товары со всей галактики. Вращаются как планеты.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== КАТЕГОРИИ ===== -->
+    <section class="categories-section">
+        <div class="container">
+            <h2 class="section-title">🌍 Категории</h2>
+            <div class="categories-orbit" id="categoriesOrbit">
+                <!-- Категории загружаются из JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ТОВАРЫ (ПЛАНЕТЫ) ===== -->
+    <section class="products-section">
+        <div class="container">
+            <h2 class="section-title">🛸 Товары</h2>
+            <div class="products-universe" id="productsUniverse">
+                <!-- Товары загружаются из JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ПОДВАЛ ===== -->
+    <footer class="footer">
+        <div class="container">
+            <p>© 2025 Planet Shop. Все права защищены. 🪐</p>
+        </div>
+    </footer>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
