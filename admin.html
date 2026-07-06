@@ -15,14 +15,12 @@
             <a href="index.html" class="back-link">← На сайт</a>
         </header>
 
-        <!-- ===== ВХОД ===== -->
         <div id="loginForm" class="login-form">
             <h2>🔐 Вход</h2>
             <input type="password" id="adminPassword" placeholder="Пароль">
             <button onclick="login()">Войти</button>
         </div>
 
-        <!-- ===== ПАНЕЛЬ ===== -->
         <div id="adminPanel" style="display:none;">
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchTab('dashboard')">📊 Дашборд</button>
@@ -33,7 +31,6 @@
                 <button class="tab-btn" onclick="switchTab('backup')">💾 Бэкап</button>
             </div>
 
-            <!-- ===== ДАШБОРД ===== -->
             <div id="tab-dashboard" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card"><div class="number" id="statProducts">0</div><div class="label">Товаров</div></div>
@@ -43,7 +40,6 @@
                 </div>
             </div>
 
-            <!-- ===== ТОВАРЫ ===== -->
             <div id="tab-products" class="tab-content">
                 <div class="section">
                     <h2>🛸 Управление товарами</h2>
@@ -52,7 +48,6 @@
                 </div>
             </div>
 
-            <!-- ===== КАТЕГОРИИ ===== -->
             <div id="tab-categories" class="tab-content">
                 <div class="section">
                     <h2>🌍 Управление категориями</h2>
@@ -61,7 +56,6 @@
                 </div>
             </div>
 
-            <!-- ===== СТАТИСТИКА ===== -->
             <div id="tab-stats" class="tab-content">
                 <div class="section">
                     <h2>📈 Статистика посещений</h2>
@@ -74,7 +68,6 @@
                 </div>
             </div>
 
-            <!-- ===== ЗАЯВКИ ===== -->
             <div id="tab-leads" class="tab-content">
                 <div class="section">
                     <h2>📩 Заявки</h2>
@@ -83,7 +76,6 @@
                 </div>
             </div>
 
-            <!-- ===== БЭКАП ===== -->
             <div id="tab-backup" class="tab-content">
                 <div class="section">
                     <h2>💾 Бэкап</h2>
@@ -99,7 +91,6 @@
         </div>
     </div>
 
-    <!-- ===== МОДАЛЬНОЕ ОКНО ===== -->
     <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
         <div class="modal-box">
             <button class="modal-close" onclick="closeModal()">✕</button>
