@@ -6,7 +6,6 @@ var PLANET_KEYS = {
     LEADS: 'planet_leads'
 };
 
-// ===== ДЕФОЛТНЫЕ КАТЕГОРИИ =====
 function getDefaultCategories() {
     return [
         { id: 'electronics', name: '📡 Электроника', icon: '📡' },
@@ -17,7 +16,6 @@ function getDefaultCategories() {
     ];
 }
 
-// ===== ДЕФОЛТНЫЕ ТОВАРЫ =====
 function getDefaultProducts() {
     return [
         {
@@ -89,7 +87,6 @@ function getDefaultProducts() {
     ];
 }
 
-// ===== ЗАГРУЗКА ДАННЫХ =====
 function loadPlanetData(key, defaultData) {
     var stored = localStorage.getItem(key);
     if (stored) {
@@ -107,11 +104,9 @@ function savePlanetData(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
 }
 
-// ===== СТАТИСТИКА ПОСЕЩЕНИЙ =====
 function updatePlanetStats() {
     var stats = loadPlanetData(PLANET_KEYS.STATS, { views: 0, today: 0, lastVisit: null });
     var today = new Date().toISOString().split('T')[0];
-    
     stats.views = (stats.views || 0) + 1;
     if (stats.lastVisit !== today) {
         stats.today = 1;
@@ -119,10 +114,8 @@ function updatePlanetStats() {
     } else {
         stats.today = (stats.today || 0) + 1;
     }
-    
     savePlanetData(PLANET_KEYS.STATS, stats);
 }
 
-// ===== ИНИЦИАЛИЗАЦИЯ ДАННЫХ =====
 var planetProducts = loadPlanetData(PLANET_KEYS.PRODUCTS, getDefaultProducts());
 var planetCategories = loadPlanetData(PLANET_KEYS.CATEGORIES, getDefaultCategories());
